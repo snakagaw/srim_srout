@@ -5,6 +5,7 @@ library to parse output data from SRIM SR
 import sys
 import argparse
 import json
+from decimal import Decimal
 
 from srim_srout import stoppingunit
 from srim_srout import version
@@ -14,17 +15,17 @@ class Error(Exception):
 
 # energy conversion to keV
 energy_conversion = {
-    'eV': 1.0e-3,
-    'keV': 1.0,
-    'MeV': 1.0e3,
-    'GeV': 1.0e6}
+    'eV': Decimal(1e-3),
+    'keV': Decimal(1),
+    'MeV': Decimal(1e3),
+    'GeV': Decimal(1e6)}
 
 # length conversion to A
 length_conversion = {
-    'A': 1.0,
-    'nm': 10.0,
-    'um': 10.0e3,
-    'mm': 10.0e6}
+    'A': Decimal(1),
+    'nm': Decimal(10),
+    'um': Decimal(10e3),
+    'mm': Decimal(10e6)}
 
 def parse_projectile_line(r):
     """parse projectile data line in numerical values
@@ -44,7 +45,7 @@ def parse_projectile_line(r):
     d = (
         c[2], # Species name
         int(c[3][1:-1]), # Atomic Number
-        float(c[7]) # Atomic Mass
+        Decimal(c[7]) # Atomic Mass
         )
 
     return d
@@ -66,8 +67,8 @@ def parse_density_line(r):
     """
     c = r.split()
     d = (
-        float(c[-5]), # mass density
-        float(c[-2]) # Atomic Number
+        Decimal(c[-5]), # mass density
+        Decimal(c[-2]) # Atomic Number
         )
 
     return d
@@ -90,9 +91,9 @@ def parse_target_composition_row(r):
     c = r.split()
     d = (
         c[0], # Symbol
-        float(c[1]), # Atomic Number
-        float(c[2]), # Atomic Percent
-        float(c[3])  # Mass Percent
+        Decimal(c[1]), # Atomic Number
+        Decimal(c[2]), # Atomic Percent
+        Decimal(c[3])  # Mass Percent
         )
 
     return d
@@ -123,12 +124,12 @@ def parse_tbl_row(r):
     """
     c = r.split()
     d = (
-        float(c[0]) * energy_conversion[c[1]], # energy (in Kev)
-        float(c[2]), # dE/dx Elec. (in given unit, in the file),
-        float(c[3]), # dE/dx Nucl. (in given unit, in the file),
-        float(c[4]) * length_conversion[c[5]], # Proj. Range (in AA),
-        float(c[6]) * length_conversion[c[7]], # Long. Strgl. (in AA),
-        float(c[8]) * length_conversion[c[9]] # Lat. Strgl. (in AA))
+        Decimal(c[0]) * energy_conversion[c[1]], # energy (in Kev)
+        Decimal(c[2]), # dE/dx Elec. (in given unit, in the file),
+        Decimal(c[3]), # dE/dx Nucl. (in given unit, in the file),
+        Decimal(c[4]) * length_conversion[c[5]], # Proj. Range (in AA),
+        Decimal(c[6]) * length_conversion[c[7]], # Long. Strgl. (in AA),
+        Decimal(c[8]) * length_conversion[c[9]] # Lat. Strgl. (in AA))
         )
 
     return d
@@ -277,6 +278,11 @@ def parse(input):
             d['tbl_data'].append(parse_tbl_row(line))
 
 
+def decimal_default_process(a):
+    if isinstance(a, Decimal):
+        return float(a)
+    raise TypeError
+
 # run as script
 def main(args=sys.argv):
     aparser = argparse.ArgumentParser()
@@ -308,7 +314,7 @@ def main(args=sys.argv):
         del(d['debug_string'])
 
     # dump as json
-    json.dump(d, args.output, indent=2)
+    json.dump(d, args.output, indent=2, default=decimal_default_process)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
